@@ -3,7 +3,12 @@ import tensorflow as tf
 
 from model import Model
 
-flags = tf.app.flags
+# modifying code to work with newer tensor flow
+tf.compat.v1.disable_v2_behavior()
+
+
+
+flags = tf.compat.v1.app.flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_boolean('test', False, 'If true, test against a random strategy.')
@@ -24,8 +29,8 @@ if not os.path.exists(summary_path):
     os.makedirs(summary_path)
 
 if __name__ == '__main__':
-    graph = tf.Graph()
-    sess = tf.Session(graph=graph)
+    graph = tf.compat.v1.Graph()
+    sess = tf.compat.v1.Session(graph=graph)
     with sess.as_default(), graph.as_default():
         model = Model(sess, model_path, summary_path, checkpoint_path, restore=FLAGS.restore)
         if FLAGS.test:
