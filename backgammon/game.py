@@ -4,6 +4,8 @@ import time
 import random
 import numpy as np
 
+as_draw = True
+
 class Game:
 
     LAYOUT = "0-2-o,5-5-x,7-3-x,11-5-o,12-5-x,16-3-o,18-5-o,23-2-x"
@@ -77,14 +79,42 @@ class Game:
 
         self.take_turn(player, roll, draw=draw)
 
+    def as_print_move_std (self, move):
+        ret_str = ""
+        print ("as: move: ", move)
+
+        #  this means on bar???
+        if move is None:
+            return ""
+        
+        for (from_p, to_p) in move:
+            print ("from_p: ", from_p)
+            print ("to_p: ", to_p)
+            if (from_p == 'on'):
+                ret_str += str(25) + "/" + str(24 - to_p) + " "
+            elif (to_p == 'off'):
+                ret_str += str(24 - from_p) + "/" + str(0) + " "
+            else:
+                ret_str += str(24 - from_p) + "/" + str(24 - to_p) + " "
+        ret_str = ret_str.strip()
+        print ("as: ret_str: " + ret_str)
+        
     def take_turn(self, player, roll, draw=False):
         if draw:
             print("Player %s rolled <%d, %d>." % (player.player, roll[0], roll[1]))
             time.sleep(1)
 
+        if as_draw:
+            print("%d%d" % (roll[0], roll[1]))
+
         moves = self.get_actions(roll, player.player, nodups=True)
         move = player.get_action(moves, self) if moves else None
 
+        #print ("as: move = " + str(move))
+        self.as_print_move_std (move)
+
+
+        
         if move:
             self.take_action(move, player.player)
 
@@ -329,16 +359,19 @@ class Game:
 
     def draw(self):
         os.system('clear')
-        largest = max([len(self.grid[i]) for i in range(len(self.grid)/2,len(self.grid))])
+        #largest = max([len(self.grid[i]) for i in range(len(self.grid)/2,len(self.grid))])
+        largest = max([len(self.grid[i]) for i in range(int(len(self.grid)/2),len(self.grid))])
         for i in range(-2,largest):
-            for col in range(len(self.grid)/2,len(self.grid)):
+            print ("as: raw : " + str(len(self.grid)/2))
+            print ("as: int : " + str(int(len(self.grid)/2)))
+            for col in range(int(len(self.grid)/2),len(self.grid)):
                 self.draw_col(i,col)
             print ("|")
         print
         print
-        largest = max([len(self.grid[i]) for i in range(len(self.grid)/2)])
+        largest = max([len(self.grid[i]) for i in range(int(len(self.grid)/2))])
         for i in range(largest-1,-3,-1):
-            for col in range(len(self.grid)/2-1,-1,-1):
+            for col in range(int(len(self.grid)/2)-1,-1,-1):
                 self.draw_col(i,col)
             print ("|")
         for t in self.players:

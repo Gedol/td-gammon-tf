@@ -47,8 +47,8 @@ class Model(object):
 
         #tf.scalar_summary('lambda', lamda)
         #tf.scalar_summary('alpha', alpha)
-        tf.summary.scalar('lambda', lamda)
-        tf.summary.scalar('alpha', alpha)
+        tf.compat.v1.summary.scalar('lambda', lamda)
+        tf.compat.v1.summary.scalar('alpha', alpha)
 
 
 
@@ -80,7 +80,7 @@ class Model(object):
 
         # mean squared error of the difference between the next state and the current state
         loss_op = tf.compat.v1.reduce_mean(tf.compat.v1.square(self.V_next - self.V), name='loss')
-
+        
         # check if the model predicts the correct state
         accuracy_op = tf.compat.v1.reduce_sum(tf.compat.v1.cast(tf.compat.v1.equal(tf.compat.v1.round(self.V_next), tf.compat.v1.round(self.V)), dtype='float'), name='accuracy')
 
@@ -191,7 +191,31 @@ class Model(object):
         game = Game.new()
         game.play([TDAgent(Game.TOKENS[0], self), HumanAgent(Game.TOKENS[1])], draw=True)
 
+    # will this work?
+    def play_self(self):
+        game = Game.new()
+        game.play([TDAgent(Game.TOKENS[0], self), TDAgent(Game.TOKENS[1], self)], draw=False)
+
+        
+    def test_against_self(self, episodes=100, draw=False):
+        players = [TDAgent(Game.TOKENS[0], self), TDAgent(Game.TOKENS[1], self)]
+        winners = [0, 0]
+        for episode in range(episodes):
+            game = Game.new()
+
+            winner = game.play(players, draw=draw)
+            winners[winner] += 1
+
+            winners_total = sum(winners)
+            print("[Episode %d] %s (%s) vs %s (%s) %d:%d of %d games (%.2f%%)" % (episode, \
+                players[0].name, players[0].player, \
+                players[1].name, players[1].player, \
+                winners[0], winners[1], winners_total, \
+                (winners[0] / winners_total) * 100.0))
+
+
     def test(self, episodes=100, draw=False):
+        print ("\n\nTesting agent playing against itself.")
         players = [TDAgent(Game.TOKENS[0], self), RandomAgent(Game.TOKENS[1])]
         winners = [0, 0]
         for episode in range(episodes):
@@ -217,6 +241,14 @@ class Model(object):
         validation_interval = 1000
         episodes = 5000
 
+        print ("as: herehere!!")
+        episodes = 2  # as test
+
+        V_next = 0  # Hack to keep old V
+        as_tot_loss = 0.0
+        as_loss_c = 0
+        as_loss_n = 1000  # when should we average loss?
+        
         for episode in range(episodes):
             if episode != 0 and episode % validation_interval == 0:
                 self.test(episodes=100)
@@ -225,21 +257,41 @@ class Model(object):
             player_num = random.randint(0, 1)
 
             x = game.extract_features(players[player_num].player)
-
+            
             game_step = 0
             while not game.is_over():
                 game.next_step(players[player_num], player_num)
                 player_num = (player_num + 1) % 2
-
+                
                 x_next = game.extract_features(players[player_num].player)
+                #print ("as: bf vn: ", V_next)
+                as_prev_v = V_next # HACK
                 V_next = self.get_output(x_next)
+                #print("as: af vn: ", V_next)
+
+                if (game_step > 0):
+                    #print ("as: cur loss: " + str(((V_next[0][0] - as_prev_v[0][0]) ** 2) / 2))
+                    as_tot_loss += ((V_next[0][0] - as_prev_v[0][0]) ** 2) / 2  # HACK
+                    #print ("as: " + str(as_tot_loss))
+
+                    as_loss_c += 1
+                
+                if (as_loss_c > as_loss_n):
+                    eff_loss = (as_tot_loss / as_loss_c)
+                    print ("as: Avg loss last " + str(as_loss_n) + " steps:\t" + str(eff_loss))
+                    #print ("as: Avg loss last " + str(as_loss_n) + " steps:\t" + "{:10.10f}".format(eff_loss)) 
+                    as_tot_loss = 0
+                    as_loss_c = 0
+                #print ("as: before run Variables:", model.variables)
+
+                
                 self.sess.run(self.train_op, feed_dict={ self.x: x, self.V_next: V_next })
 
                 x = x_next
                 game_step += 1
 
             winner = game.winner()
-
+            
             _, global_step, summaries, _ = self.sess.run([
                 self.train_op,
                 self.global_step,
@@ -249,8 +301,11 @@ class Model(object):
             summary_writer.add_summary(summaries, global_step=global_step)
 
             print("Game %d/%d (Winner: %s) in %d turns" % (episode, episodes, players[winner].player, game_step))
+            #print ("as: summaries_op + " + str(self.summaries_op))
             self.saver.save(self.sess, self.checkpoint_path + 'checkpoint', global_step=global_step)
 
         summary_writer.close()
 
-        self.test(episodes=1000)
+        #self.test(episodes=1000)
+        #self.test(episodes=10) # as test
+        self.test_against_self(episodes=100) # as test
