@@ -239,10 +239,9 @@ class Model(object):
         players = [TDAgent(Game.TOKENS[0], self), TDAgent(Game.TOKENS[1], self)]
 
         validation_interval = 1000
-        episodes = 5000
+        episodes = 10000
 
-        print ("as: herehere!!")
-        episodes = 2  # as test
+        #episodes = 6  # as test
 
         V_next = 0  # Hack to keep old V
         as_tot_loss = 0.0
@@ -308,4 +307,5 @@ class Model(object):
 
         #self.test(episodes=1000)
         #self.test(episodes=10) # as test
-        self.test_against_self(episodes=100) # as test
+        
+        self.test_against_self(episodes=5, draw=True) # as test

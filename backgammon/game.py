@@ -4,7 +4,8 @@ import time
 import random
 import numpy as np
 
-as_draw = True
+as_draw = False
+as_moves = []
 
 class Game:
 
@@ -63,41 +64,98 @@ class Game:
 
     def roll_dice(self):
         return (random.randint(1, self.die), random.randint(1, self.die))
-
+    
     def play(self, players, draw=False):
         player_num = random.randint(0, 1)
         while not self.is_over():
             self.next_step(players[player_num], player_num, draw=draw)
             player_num = (player_num + 1) % 2
+        #print ("as: FINISHED GAME!")
+        #print ("as: finished game: moves: " + str(as_moves))
+        print ("as: finished game in number of moves: " + str(len(as_moves)))
+        #gnu_str = self.gnu_string_from_moves()
+        #print ("as: gnu str " + gnu_str)
         return self.winner()
 
+    def gnu_string_from_moves(self):
+        game_str = "\n"
+        j = 0
+        move_number = 1
+        moves_str = ""
+        for move in as_moves:
+            moves_str += " " + move
+            #print ("as: moves_str = " + moves_str)
+            j += 1
+            if j == 2:
+                game_str += str(move_number) + ") " + moves_str + "\n"
+                moves_str = ""
+                move_number += 1
+                j = 0
+        if (moves_str):
+            print ("as: final moves_str in GNU format: " + moves_str)
+                
+        return game_str
+
+    
     def next_step(self, player, player_num, draw=False):
         roll = self.roll_dice()
-
+        if as_draw:
+            print ("as: roll is \t" + str(roll))
+        
         if draw:
             self.draw()
 
         self.take_turn(player, roll, draw=draw)
 
-    def as_print_move_std (self, move):
-        ret_str = ""
-        print ("as: move: ", move)
+    def infer_move(self, from_p, to_p, player):
+        # don't understand but try to hack it
+        correct_from = 0
+        correct_to = 0
+        if (player == 'o'):
+            correct_from  = 24 - from_p
+            correct_to = 24 - to_p
+        else:
+            as_roll = to_p - from_p   # infer roll
+            correct_from = from_p + 1
+            correct_to = correct_from - as_roll
+        return [correct_from, correct_to]
+        
+    def as_print_move_std (self, roll, move, player):
+        
+        ret_str = "%d%d" % (roll[0], roll[1]) + ": " # start with roll
+        if (as_draw):
+            print ("as: move: ", move)
 
         #  this means on bar???
         if move is None:
             return ""
         
         for (from_p, to_p) in move:
-            print ("from_p: ", from_p)
-            print ("to_p: ", to_p)
+            #if as_draw:
+            #    print ("as: from position: ", from_p)
+            #    print ("as: to position: ", to_p)
+
+            # old, seems conversion was different (maybe for saved time)
+            # keep for now
             if (from_p == 'on'):
                 ret_str += str(25) + "/" + str(24 - to_p) + " "
             elif (to_p == 'off'):
                 ret_str += str(24 - from_p) + "/" + str(0) + " "
             else:
                 ret_str += str(24 - from_p) + "/" + str(24 - to_p) + " "
+
+            # if (from_p == 'on'):
+            #     ret_str += str(25) + "/" + str(24 - to_p) + " "
+            # elif (to_p == 'off'):
+            #     ret_str += str(24 - from_p) + "/" + str(0) + " "
+            # else:
+            #     [correct_from, correct_to] = self.infer_move(from_p, to_p, player)
+            #     ret_str += str(correct_from) + "/" + str(correct_to) + " "            
+            
         ret_str = ret_str.strip()
-        print ("as: ret_str: " + ret_str)
+        as_moves.append(ret_str)
+        #if as_draw:
+        #    print ("as: ret_str: " + ret_str)
         
     def take_turn(self, player, roll, draw=False):
         if draw:
@@ -110,8 +168,9 @@ class Game:
         moves = self.get_actions(roll, player.player, nodups=True)
         move = player.get_action(moves, self) if moves else None
 
-        #print ("as: move = " + str(move))
-        self.as_print_move_std (move)
+        if draw:
+            print ("as: move = " + str(move))
+        #self.as_print_move_std (roll, move, player.player)
 
 
         
@@ -358,16 +417,15 @@ class Game:
             print ("  ", end=" ")
 
     def draw(self):
+        print ("\n\n")  # as: added for readability
         os.system('clear')
         #largest = max([len(self.grid[i]) for i in range(len(self.grid)/2,len(self.grid))])
         largest = max([len(self.grid[i]) for i in range(int(len(self.grid)/2),len(self.grid))])
         for i in range(-2,largest):
-            print ("as: raw : " + str(len(self.grid)/2))
-            print ("as: int : " + str(int(len(self.grid)/2)))
             for col in range(int(len(self.grid)/2),len(self.grid)):
                 self.draw_col(i,col)
             print ("|")
-        print
+        print ("\n")  # as: added new line for readability
         print
         largest = max([len(self.grid[i]) for i in range(int(len(self.grid)/2))])
         for i in range(largest-1,-3,-1):
